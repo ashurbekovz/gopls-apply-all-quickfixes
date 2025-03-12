@@ -14,6 +14,8 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
+const maxFixesPerFile = 1000
+
 func main() {
 	// Initialize and parse command-line arguments
 	gopath := os.Getenv("GOPATH")
@@ -183,12 +185,15 @@ func worker(goplsPath string, jobs <-chan string, wg *sync.WaitGroup, bar *progr
 	defer wg.Done()
 
 	for path := range jobs {
-		cmd := exec.Command(goplsPath, "codeaction", "-kind=quickfix", "-exec", "-w", path)
-		output, err := cmd.CombinedOutput()
+		for range maxFixesPerFile {
+			cmd := exec.Command(goplsPath, "codeaction", "-kind=quickfix", "-exec", "-w", path)
+			output, err := cmd.CombinedOutput()
 
-		if err != nil {
-			if !strings.Contains(string(output), "no matching code action") {
-				log.Printf("Error in %s: %v\n%s", path, err, string(output))
+			if err != nil {
+				if !strings.Contains(string(output), "no matching code action") {
+					log.Printf("Error in %s: %v\n%s", path, err, string(output))
+				} 
+                break
 			}
 		}
 
